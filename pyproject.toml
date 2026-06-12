@@ -11,7 +11,8 @@ dependencies = [
     "sqlalchemy (>=2.0.50,<3.0.0)",
     "aiosqlite (>=0.22.1,<0.23.0)",
     "psycopg-binary (>=3.3.4,<4.0.0)",
-    "psycopg (>=3.3.4,<4.0.0)"
+    "psycopg (>=3.3.4,<4.0.0)",
+    "python-dotenv (>=1.2.2,<2.0.0)"
 ]
 
 
@@ -38,13 +39,13 @@ quote-style = 'single'
 
 [tool.pytest]
 pythonpath = ['.']
-addopts = ['-p', 'no:warnings', '--cov=sqlalchemy_tests', '--cov-context=test']
+addopts = ['-p', 'no:warnings', '--cov=sqlalchemy_study', '--cov-context=test']
 
 [tool.taskipy.tasks]
 lint = 'ruff check'
 pre_format = 'ruff check --fix'
 format = 'ruff format'
-run = 'python sqlalchemy_tests/test01.py'
+run = 'python sqlalchemy_study/playground.py'
 pre_test = 'task lint'
 test = 'pytest -s -x -vv'
 post_test = 'coverage html --show-contexts'
