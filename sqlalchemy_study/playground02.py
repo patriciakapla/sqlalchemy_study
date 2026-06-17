@@ -9,11 +9,11 @@ engine = create_engine(DATABASE_URL, echo=True)
 
 
 """
-# Transaction w/o context manager (not ideal):
+# Transaction using text() w/o context manager (not ideal):
 
 con = engine.connect()
 
-sql = text('select id, user_id, comment from comments')
+sql = text('select id, user_id, comment from "comment"')
 
 con.execute(sql)
 
@@ -22,10 +22,10 @@ con.close()    # needs closure
 """
 
 
-# Transaction with context manager:
+# Transaction using text() with context manager:
 
 with engine.connect() as con:
-    sql = text('select id, user_id, comment from comments')
+    sql = text('select id, user_id, comment from "comment"')
     result = con.execute(sql)
 
 """
@@ -55,7 +55,7 @@ a_engine = create_async_engine(DATABASE_URL)
 
 async def main():
     async with a_engine.connect() as connection:
-        a_sql = text('select id, user_id, comment from comments')
+        a_sql = text('select id, user_id, comment from "comment"')
        a_result  = await connection.execute(a_sql)
 
 

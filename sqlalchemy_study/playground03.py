@@ -17,7 +17,7 @@ DATABASE_URL = str(getenv('DATABASE_URL'))
 
 
 engine = create_engine(DATABASE_URL)
-query = 'select id, user_id, comment from comments limit 10 offset {of}'
+query = 'select id, user_id, comment from "comment" limit 10 offset {of}'
 # limit 10 -> 10 results
 # offset -> retrieves a subset of rows (pagination)
 # of -> determines which "page" of 10 rows will be retrieved
