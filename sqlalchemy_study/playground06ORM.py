@@ -1,7 +1,7 @@
-'''
+"""
 Object Relational Mapper (O/R Mapper)
 
-mapping of the metadata of a table into a class. 
+mapping of the metadata of a table into a class.
 each row is related to an instance
 
 
@@ -27,27 +27,42 @@ imperative definition
 
 automapping
     events
-'''
+"""
+
 from datetime import datetime
 
 from dotenv import load_dotenv
 
 from os import getenv
 
-from sqlalchemy import (Column, Integer, String, 
-                        func, ForeignKey, TIMESTAMP, 
-                        Table, PrimaryKeyConstraint, 
-                        ForeignKeyConstraint, create_engine)
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    func,
+    ForeignKey,
+    TIMESTAMP,
+    Table,
+    PrimaryKeyConstraint,
+    ForeignKeyConstraint,
+    create_engine,
+    select,
+)
 
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, registry, session
-
-
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    mapped_column,
+    registry,
+    Session,
+)
 
 
 # DECLARATIVE: REGULAR CLASSES (w/o dataclass or type hints)
 
-class Base(DeclarativeBase):
-    ...
+
+class Base(DeclarativeBase): ...
+
 
 class User(Base):
     __tablename__ = 'user'
@@ -60,6 +75,7 @@ class User(Base):
 
 # DECLARATIVE: REGULAR CLASSES with TYPE HINTS
 
+
 class Post(Base):
     __tablename__ = 'post'
 
@@ -67,9 +83,7 @@ class Post(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
     post: Mapped[str]
     created_at: Mapped[datetime] = mapped_column(
-        TIMESTAMP(timezone=False),
-        server_default=func.now(),
-        init=False
+        TIMESTAMP(timezone=False), server_default=func.now()
     )
 
 
@@ -77,36 +91,40 @@ class Post(Base):
 
 reg = registry()
 
+
 @reg.mapped_as_dataclass
 class Comment:
     __tablename__ = 'comment'
 
-    id:Mapped[int] = mapped_column(primary_key=True, init=False)  
-        # init=False tells the constructor to not expect an argument for the attr
-    user_id:Mapped[int] = mapped_column(ForeignKey('user.id', nullable=False))
-    comment:Mapped[str]
-    post_id:Mapped[int | None] = mapped_column(ForeignKey('post.id'))
-    live_id:Mapped[int | None] = mapped_column(ForeignKey('live.id'))
+    id: Mapped[int] = mapped_column(primary_key=True, init=False)
+    # init=False tells the constructor to not expect an argument for the attr
+    user_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
+    comment: Mapped[str]
+    post_id: Mapped[int | None] = mapped_column(ForeignKey('post.id'))
+    live_id: Mapped[int | None] = mapped_column(ForeignKey('live.id'))
 
 
 # IMPERATIVE
 
 mapper_registry = registry()
 
-live_table = Table('live', mapper_registry.metadata,
-          Column('id', Integer(), nullable=False),
-          Column('user_id', Integer(), nullable=False),
-          Column('platform', String(), nullable=False),
-          Column('created_at', TIMESTAMP(timezone=False), nullable=False),
-          PrimaryKeyConstraint('id'),
-          ForeignKeyConstraint(['user_id'], ['user.id'])
-          )
+live_table = Table(
+    'live',
+    mapper_registry.metadata,
+    Column('id', Integer(), nullable=False),
+    Column('user_id', Integer(), nullable=False),
+    Column('platform', String(), nullable=False),
+    Column('created_at', TIMESTAMP(timezone=False), nullable=False),
+    PrimaryKeyConstraint('id'),
+    ForeignKeyConstraint(['user_id'], ['user.id']),
+)
+
 
 class Live:
     pass
 
-mapper_registry.map_imperatively(Live, live_table)
 
+mapper_registry.map_imperatively(Live, live_table)
 
 
 # SCHEMA CREATION USING REGISTRY() - more explicit, lower level, usually with dataclasses
@@ -118,12 +136,12 @@ engine = create_engine(DATABASE_URL)
 
 
 reg.metadata.create_all(engine)
-    # in sqlalchemy's core, the Metadata class is the container with 
-    # all the table definitions from mapped classes.
-    # in ORM, the registry() class has the metadata inside it.
-    # create_all() creates all the database objects mapped to metadata.
-    # Python class (-mapping->) table definition/MetaData (-create_all->) 
-        # physical table in PostgreSQL
+# in sqlalchemy's core, the Metadata class is the container with
+# all the table definitions from mapped classes.
+# in ORM, the registry() class has the metadata inside it.
+# create_all() creates all the database objects mapped to metadata.
+# Python class (-mapping->) table definition/MetaData (-create_all->)
+# physical table in PostgreSQL
 
 
 # SCHEMA CREATION USING THE DECLARATIVE BASE - implements registry() behind the scenes
@@ -131,14 +149,55 @@ reg.metadata.create_all(engine)
 Base.metadata.create_all(engine)
 
 
+# mixing registry() and declarative base schemas can go wrong!
+# each one creates a different object, so the tables in each wont see
+# the others'!
+# in this example, Base.metadata stores User and Post, reg.metadata stores Comment
+# and mapper_registry.metadata will store Live
 
 
 # creating an instance
 
 Comment(
-    user_id=3, 
+    user_id=3,
     comment='what a beautiful wedding, said the bridesmade to the waiter',
     post_id=3,
-    live_id=None
+    live_id=None,
+)
+
+
+"""
+SESSION -> manages transactions! communication between python objects and DB.
+    implements abstraction for the connection, begin, end, etc.
+    and still creates object cache in memory (actually an identity map) of each loaded row
+"""
+
+with Session(engine) as s:
+    result = s.scalar(select(Comment).where(Comment.user_id == 3))
+    print(  # scalar returns a single value
+        result
     )
 
+# the result is an object:
+# Comment(id=204, user_id=3, comment='Automated heuristic attitude', post_id=None, live_id=None)
+# now we can do stuff like result.id, when connected! when connection closes,
+# result isnt available anymore (it's detached)
+
+
+with Session(engine) as s:
+    result = s.scalars(select(Comment))  # scalarS different then scalar!
+    print(result.fetchmany(10))  # ScalarS returns an iterable!!!
+    print(f'\n{result.fetchall()[-1]}')
+
+# while .execute() (used in previous core examples) returns tuples,
+# scalar/scalars return objects!
+
+
+# Commiting transactions
+
+with Session(engine) as s:
+    result = s.scalar(select(Comment).where(Comment.user_id == 5))
+    if result is not None:
+        result.comment = 'PEI!'
+        print(result.comment)
+    s.commit()

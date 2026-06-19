@@ -101,7 +101,7 @@ sql6 = select(comment).where(
 )
 
 with engine.connect() as con:
-    with engine.begin(): 
+    with engine.begin():
         result = con.execute(sql5)
         print(result.rowcount)
         con.commit()
