@@ -108,3 +108,37 @@ class Live:
 mapper_registry.map_imperatively(Live, live_table)
 
 
+
+# SCHEMA CREATION USING REGISTRY() - more explicit, lower level, usually with dataclasses
+
+load_dotenv()
+DATABASE_URL = str(getenv('DATABASE_URL'))
+
+engine = create_engine(DATABASE_URL)
+
+
+reg.metadata.create_all(engine)
+    # in sqlalchemy's core, the Metadata class is the container with 
+    # all the table definitions from mapped classes.
+    # in ORM, the registry() class has the metadata inside it.
+    # create_all() creates all the database objects mapped to metadata.
+    # Python class (-mapping->) table definition/MetaData (-create_all->) 
+        # physical table in PostgreSQL
+
+
+# SCHEMA CREATION USING THE DECLARATIVE BASE - implements registry() behind the scenes
+
+Base.metadata.create_all(engine)
+
+
+
+
+# creating an instance
+
+Comment(
+    user_id=3, 
+    comment='what a beautiful wedding, said the bridesmade to the waiter',
+    post_id=3,
+    live_id=None
+    )
+
