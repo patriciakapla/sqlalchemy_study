@@ -45,16 +45,14 @@ from sqlalchemy import (
     Table,
     PrimaryKeyConstraint,
     ForeignKeyConstraint,
-    create_engine,
-    select,
+    create_engine
 )
 
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
     mapped_column,
-    registry,
-    Session,
+    registry
 )
 
 
@@ -156,6 +154,7 @@ Base.metadata.create_all(engine)
 # and mapper_registry.metadata will store Live
 
 
+
 # creating an instance
 
 Comment(
@@ -164,40 +163,3 @@ Comment(
     post_id=3,
     live_id=None,
 )
-
-
-"""
-SESSION -> manages transactions! communication between python objects and DB.
-    implements abstraction for the connection, begin, end, etc.
-    and still creates object cache in memory (actually an identity map) of each loaded row
-"""
-
-with Session(engine) as s:
-    result = s.scalar(select(Comment).where(Comment.user_id == 3))
-    print(  # scalar returns a single value
-        result
-    )
-
-# the result is an object:
-# Comment(id=204, user_id=3, comment='Automated heuristic attitude', post_id=None, live_id=None)
-# now we can do stuff like result.id, when connected! when connection closes,
-# result isnt available anymore (it's detached)
-
-
-with Session(engine) as s:
-    result = s.scalars(select(Comment))  # scalarS different then scalar!
-    print(result.fetchmany(10))  # ScalarS returns an iterable!!!
-    print(f'\n{result.fetchall()[-1]}')
-
-# while .execute() (used in previous core examples) returns tuples,
-# scalar/scalars return objects!
-
-
-# Commiting transactions
-
-with Session(engine) as s:
-    result = s.scalar(select(Comment).where(Comment.user_id == 5))
-    if result is not None:
-        result.comment = 'PEI!'
-        print(result.comment)
-    s.commit()

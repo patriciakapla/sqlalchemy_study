@@ -6,13 +6,14 @@ from datetime import datetime
 
 from sqlalchemy import ForeignKey, TIMESTAMP, func, create_engine, select
 
-from sqlalchemy.orm import registry, Mapped, mapped_column, Session
+from sqlalchemy.orm import registry, Mapped, mapped_column
 
 load_dotenv()
 
 DATABASE_URL = str(getenv('DATABASE_URL'))
 
 engine = create_engine(DATABASE_URL)
+
 
 reg = registry()
 
@@ -64,47 +65,27 @@ class Comment:
 reg.metadata.create_all(engine)
 
 
-Comment(
-    user_id=3,
-    comment='what a beautiful wedding, said the bridesmade to the waiter',
-    post_id=3,
-    live_id=None,
-)
-
-
-"""
-SESSION -> manages transactions! communication between python objects and DB.
-    implements abstraction for the connection, begin, end, etc.
-    and still creates object cache in memory (actually an identity map) of each loaded row
-"""
-
-with Session(engine) as s:
-    result = s.scalar(select(Comment).where(Comment.user_id == 3))
-    print(  # scalar returns a single value
-        result
-    )
 
 '''
-the result is an object:
-Comment(id=204, user_id=3, comment='Automated heuristic attitude', post_id=None, live_id=None)
-now we can do stuff like result.id, when connected! when connection closes,
-result isnt available anymore (it's detached)
+
+ASYNC SESSION 
+
+
 '''
 
-with Session(engine) as s:
-    result = s.scalars(select(Comment))  # scalarS different then scalar!
-    print(result.fetchmany(10))  # ScalarS returns an iterable!!!
-    print(f'\n{result.fetchall()[-1]}')
+from asyncio import run
 
-# while .execute() (used in previous core examples) returns tuples,
-# scalar/scalars return objects!
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
 
-# Commiting transactions
+async_engine = create_async_engine(DATABASE_URL)
 
-with Session(engine) as s:
-    result = s.scalar(select(Comment).where(Comment.user_id == 5))
-    if result:
-        result.comment = 'PEI!'
-        print(result.comment)
-    s.commit()
+async def main():
+    async with AsyncSession(async_engine) as s:
+        result = await s.scalar(select(Comment).where(Comment.user_id == 3))
+        if result:
+            result.comment = 'PEI!'
+            print(result.comment)
+            await s.commit()
+
+run(main())
